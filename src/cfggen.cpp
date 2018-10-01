@@ -14,6 +14,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/StringRef.h"
 #include <unordered_set>
 #include "util.h"
 
@@ -144,10 +145,10 @@ namespace {
 				outFileName.append("."+ll);
 				outFileName.append(".dot");
 			}	
-
+outs() << "test1" <<"\n";
 			// outstream
 			error_code RC;	
-			raw_fd_ostream out(outFileName, RC, sys::fs::OpenFlags::F_None);
+			raw_fd_ostream out(StringRef(outFileName), RC, sys::fs::OpenFlags::F_None);
 			// write dot file head
 			out << "digraph \"CFG for loop in function \'" << funcName << "\' at line " << ll << "\" {\n";
 			out << "\tlabel = " << "\"CFG for loop in function \'" << funcName << "\' at line " << ll << "\";\n\n";
@@ -264,7 +265,8 @@ namespace {
 			*/
 			// close graph
 			out<<"}";
-			out.close();
+			//out.close();
+outs() << "test2" <<"\n";
 
 		}// end for 
 
@@ -354,7 +356,7 @@ static RegisterStandardPasses
 
 // In this way we should use opt to load the dynamic library and apply to the llvm bitcode
 // e.g clang-3.9 -c -emit-llvm ../test/HelloWorld.C -o HelloWorld.bc
-// opt-3.9 -mem2reg -loop-simplify -loop-rotate -load pass/libSkeletonPass.so -test -disable-output HelloWorld.bc
+// opt-3.9 -mem2reg -loop-simplify -loop-rotate -load pass/libCfgPass.so -test -disable-output HelloWorld.bc
 static RegisterPass<CfgPass> X("test", "test for using the existing pass",
 									"false",
 									"true");
