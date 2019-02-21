@@ -62,7 +62,7 @@ For a CFG with N nodes (basic blocks), it will be an NxN matrix generated. Each 
 ```
 20:1:12:0	0	0.25	0.75
 ```
-It represents that this CFG node contains 20 floating-point operations, 1 memory operation, 12 control operations, and nointeger operation. Also, it indicates that this node has two adjacent nodes, one with 25% transition probability and 75% for the other. 
+It represents that this CFG node contains 20 floating-point operations, 1 memory operation, 12 control operations, and no integer operation. Also, it indicates that this node has two adjacent nodes, one with 25% transition probability and 75% for the other. 
 
 ### Example
 In this section, we use an example to demonstrate the output of CFGPass.
@@ -86,7 +86,9 @@ void multiply(double mat1[][N],
 } 
 ```
 This code snippet is the core part of matrix multiplication. The generated DOT format shows as follows (in PNG):
-![text](example/MatMul.png "visualization of DOT file")
+<p align="center">
+  <img width="272" height="542" src="example/MatMul.png">
+</p>
 
 Corresponding output in matrix (first line indicates the number of nodes):
 ```
