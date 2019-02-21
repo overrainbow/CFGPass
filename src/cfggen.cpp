@@ -62,7 +62,7 @@ namespace {
 			}	
 		*/
 
-		writeToFile(F, li, BPI, 1);		
+		writeToFile(F, li, BPI, 0);		
 
 		
 		/*
@@ -151,7 +151,7 @@ static RegisterStandardPasses
 
 // In this way we should use opt to load the dynamic library and apply to the llvm bitcode
 // e.g clang-3.9 -c -emit-llvm ../test/HelloWorld.C -o HelloWorld.bc
-// opt-3.9 -mem2reg -loop-simplify -loop-rotate -load pass/libCfgPass.so -test -disable-output HelloWorld.bc
-static RegisterPass<CfgPass> X("test", "test for using the existing pass",
+// opt-3.9 -mem2reg -loop-simplify -loop-rotate -load cfgpass/libCfgPass.so -cfggen -disable-output HelloWorld.bc
+static RegisterPass<CfgPass> X("cfggen", "test for using the existing pass",
 									"false",
 									"true");
