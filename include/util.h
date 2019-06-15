@@ -16,13 +16,18 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/StringRef.h"
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 using namespace llvm;
 using namespace std;
 
+// Get instructions from each block
+// Return summary
 bool getInstrMix(BasicBlock* bb, int* a) {
 	// floating-point operation fadd, fmul, fdiv, fsub. index 0
 	// memory operation read, write. index 1	
@@ -88,7 +93,7 @@ string getBaseName(Function& F) {
 }
 
 
-// function for write CFG info to file
+// Function for write CFG info to file
 // Each loop within the function generates an output
 // Params:
 //		li   - LoopInfo
@@ -101,7 +106,10 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 
 	string baseOutName = getBaseName(F);
 	string funcName	   = F.getName().str();
-
+	// hash map as lookup table for 
+	// basic block and its id
+	unordered_map <BlockAddress*, int> bbMap;
+	
 	for (LoopInfo::iterator lp = li.begin(); lp != li.end(); lp++)
 	{
 
@@ -144,9 +152,15 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 		for (Loop::block_iterator bi = loop -> block_begin(); bi != loop -> block_end(); bi++)
 		{
 			//(*bi)->printAsOperand(outs(),false);
-			(*bi) -> setName(Twine(label++));
+			// create a mapping
+			bbMap[BlockAddress::get(*bi)] = label++;
+			
+			// setName not working here 
+			// since it doesn't allow duplicate name
+			//(*bi) -> setName(Twine(label));
+			//int pid;
+			// ((*bi) -> getName()).getAsInteger(10, pid);
 		}
-
 		float* matrix;
 		if (mode == 0) {
 		   matrix = new float[label*label];
@@ -164,20 +178,39 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 		   matrix[0 * label + 1] = 1.0f;
 
 		}
+	
+		// storage for instruction mix for each basic block
+		vector<vector<int>> nodeInstr(label, vector<int>(4, 0));
 
 		for (Loop::block_iterator bi = (loop -> block_begin()); bi != loop -> block_end(); bi++)
 		{
 			BasicBlock* bb = *bi;				
+			BlockAddress* bAddr = BlockAddress::get(bb);
+			// label(id) for current basic block
+			int pid = bbMap[bAddr];
 			int mix[4] = {0};
 			getInstrMix(bb, mix); 
-			//outs() << "test 1: " << mix[0] << " test2  " << mix[1] << "\n"; 
 			if (mode == 1) {
 				// write node info
-				out << "\t" << (bb->getName()).str() <<" [shape=record,label=\"{";
-				out << (bb->getName()).str() << ":\\l FLOP: " << mix[0] << "\\l IntOp: " << mix[3] <<"\\l MemOp: " << mix[1] << "\\l CtrlOp: " << mix[2] << "\\l";
+				//out << "\t" << (bb->getName()).str() <<" [shape=record,label=\"{";
+				out << "\t" << to_string(pid) <<" [shape=record,label=\"{";
+				out << to_string(pid) << ":\\l FLOP: " << mix[0] << "\\l IntOp: " << mix[3] <<"\\l MemOp: " << mix[1] << "\\l CtrlOp: " << mix[2] << "\\l";
 			}
 			const TerminatorInst *tInst = bb -> getTerminator();
 			unsigned numSucc = tInst -> getNumSuccessors();
+			
+			//int pid;
+			// parent (current) bb id 
+			//((*bi) -> getName()).getAsInteger(10, pid);
+
+			// get instruction mix for node
+			for (int i = 0; i < 4; i++) {
+				nodeInstr[pid][0] = mix[0];
+				nodeInstr[pid][1] = mix[1];
+				nodeInstr[pid][2] = mix[2];
+				nodeInstr[pid][3] = mix[3];
+			}	
+
 			if (numSucc == 0) 
 			{
 				if (mode == 1) {
@@ -188,21 +221,18 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 
 			if (numSucc > 0)
 			{
-				int pid;
-				// parent bb id
-				(bb -> getName()).getAsInteger(10, pid);
 
 				if (numSucc == 1)
 				{
 					// has only one child
-					int cid;
 					// child bb id
-					(tInst -> getSuccessor(0) -> getName()).getAsInteger(10, cid);
+					int cid = bbMap[BlockAddress::get(tInst->getSuccessor(0))];
+					// (tInst -> getSuccessor(0) -> getName()).getAsInteger(10, cid);
 		
 					if (mode == 1) {
 						// close node info, add edge info
 						out << "}\"];\n";
-						out << "\t" << (bb->getName()).str() << " -> " << (tInst->getSuccessor(0)->getName()).str();
+						out << "\t" << to_string(pid) << " -> " << to_string(cid);
 						// edge weight is 1.00
 						out <<" [label = \"1.00\"];\n";
 					} else {
@@ -212,7 +242,7 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 				} else {
 					// process branch	
 					// assume two branch at most for now
-					int cid;
+					//int cid;
 					
 					if (mode == 1) {
 						// close node info
@@ -224,7 +254,8 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 						BranchProbability bp = BPI->getEdgeProbability(bb, succBB);	
 						//succBB->printAsOperand(outs(),false);
 						float value = rint((float)bp.getNumerator()/bp.getDenominator()*100)/100;
-						(succBB -> getName()).getAsInteger(10, cid);
+						//(succBB -> getName()).getAsInteger(10, cid);
+						int cid = bbMap[BlockAddress::get(succBB)];
 		
 						if (mode == 0) {
 							matrix[pid * label + cid] = value;
@@ -232,16 +263,16 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 							// write edge
 							// for the loop head we need to create a fake node 
 							// to represent the node outside loop to complete branch
-							string succName = (succBB->getName()).str();
+							string succName = to_string(cid);
 							if (succName.empty())
 							{
-								out << "\t" << (bb->getName()).str() << ":s" << i << " -> outside";
+								out << "\t" << to_string(pid) << ":s" << i << " -> outside";
 								out << " [label =\"" << value << "\"];\n";
 								// create an outside node
 								out << "\toutside [shape=record,label=\"outside loop\"];\n";
 
 							} else {
-								out << "\t" << (bb->getName()).str() << ":s" << i << " -> " << (succBB->getName()).str();
+								out << "\t" << to_string(pid) << ":s" << i << " -> " << to_string(cid);
 								out << " [label =\"" << value << "\"];\n";
 							}
 						}	
@@ -257,6 +288,14 @@ void writeToFile(Function& F, LoopInfo& li, const BranchProbabilityInfo* BPI, in
 		// first line of the output file is the matrix size
 			out << label <<"\n";
 			for (int i = 0; i < label; i++) {
+
+				// write instruction mix for the node
+				// in the beginning of the line
+				out << nodeInstr[i][0] << ":";
+				out << nodeInstr[i][1] << ":";
+				out << nodeInstr[i][2] << ":";
+				out << nodeInstr[i][3] << "\t";
+							
 				for (int j = 0; j < label; j++) {	
 					out << matrix[i*label + j] << "\t";
 				}	

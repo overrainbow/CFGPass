@@ -19,13 +19,13 @@ LLVM (Clang) 3.9+, CMake 3.1+
 1. Instrument source file by Clang-3.9:
 
 ```
-	clang++-3.9 -O1 -fprofile-instr-generate HelloWorld.C -o HelloWorld_instru
+clang++-3.9 -O1 -fprofile-instr-generate HelloWorld.C -o HelloWorld_instru
 ```
 
 2. Run executable to generate profile data:
 
 ```
-	LLVM_PROFILE_FILE="code-%p.profraw" ./HelloWorld_instru
+LLVM_PROFILE_FILE="code-%p.profraw" ./HelloWorld_instru
 ```
 
 3. Merge profile data from multiple runs:
@@ -49,7 +49,7 @@ clang++-3.9 -S -emit-llvm -fprofile-instr-use=code.profdata -o HelloWorld.instru
 ### Generate CFG
 
 ```
-opt-3.9 -load cfgpass/libCfgPass.so -test -disable-output HelloWorld.instru.bc
+opt-3.9 -load cfgpass/libCfgPass.so -cfggen -disable-output HelloWorld.instru.bc
 ```
 
 ## Output
@@ -101,6 +101,6 @@ Corresponding output in matrix (first line indicates the number of nodes):
 ```
 A [script](script/csvConverter.py) is provided to convert this plain-text matrix to csv format. 
 ```
-	$ python csvConverter.py fileName.matrix
+$ python csvConverter.py fileName.matrix
 ```
 

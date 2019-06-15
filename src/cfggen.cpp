@@ -42,6 +42,12 @@ namespace {
 	
     virtual bool runOnFunction(Function &F) {
 
+		string funcName	= F.getName().str();
+		// skip Orio input function
+		if (funcName == "malloc_arrays") return false;
+		if (funcName == "init_input_vars") return false;
+
+
 		LoopInfo &li = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 		MemoryDependenceWrapperPass &mdwp = getAnalysis<MemoryDependenceWrapperPass>();
 		LoopAccessLegacyAnalysis &lala = getAnalysis<LoopAccessLegacyAnalysis>();
